@@ -1,0 +1,107 @@
+diff --git a/node_modules/@expo/cli/build/src/start/interface/interactiveActions.js b/node_modules/@expo/cli/build/src/start/interface/interactiveActions.js
+index 122a9e1..eff8f1c 100644
+--- a/node_modules/@expo/cli/build/src/start/interface/interactiveActions.js
++++ b/node_modules/@expo/cli/build/src/start/interface/interactiveActions.js
+@@ -92,7 +92,9 @@ class DevServerManagerActions {
+     }
+     async openJsInspectorAsync() {
+         const metroServerOrigin = this.devServerManager.getDefaultDevServer().getJsInspectorBaseUrl();
++        console.log("DEBUG got metroServerOrigin", metroServerOrigin)
+         const apps = await (0, _jsInspector).queryAllInspectorAppsAsync(metroServerOrigin);
++        console.log("DEBUG got apps", apps)
+         let app1 = null;
+         if (!apps.length) {
+             return Log.warn(_chalk.default`{bold Debug:} No compatible apps connected. JavaScript Debugging can only be used with the Hermes engine. ${(0, _link).learnMore("https://docs.expo.dev/guides/using-hermes/")}`);
+diff --git a/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowser.js b/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowser.js
+index be29c7c..9a08098 100644
+--- a/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowser.js
++++ b/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowser.js
+@@ -36,6 +36,7 @@ async function findSupportedBrowserTypeAsync(launchBrowser) {
+             return browserType;
+         }
+     }
++
+     throw new Error(`[findSupportedBrowserTypeAsync] Unable to find a browser on the host to open the inspector. Supported browsers: ${supportedBrowsers.join(", ")}`);
+ }
+ async function launchInspectorBrowserAsync(url, browser, browserType) {
+diff --git a/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplLinux.js b/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplLinux.js
+index 9dea208..a8d411c 100644
+--- a/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplLinux.js
++++ b/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplLinux.js
+@@ -60,6 +60,7 @@ class LaunchBrowserImplLinux {
+     }
+     async launchAsync(browserType, args) {
+         const appId = await this.getAppId(browserType);
++        console.log("DEBUG linux final args",args);
+         this._process = await _open.default.openApp(appId, {
+             arguments: args
+         });
+diff --git a/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplWindows.js b/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplWindows.js
+index 4d9c445..5fd5609 100644
+--- a/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplWindows.js
++++ b/node_modules/@expo/cli/build/src/start/server/middleware/inspector/LaunchBrowserImplWindows.js
+@@ -23,16 +23,17 @@ class LaunchBrowserImplWindows {
+         let result = false;
+         try {
+             const env = await this.getPowershellEnv();
++            console.log("DEBUG got powershell env", env);
+             const { status  } = await (0, _spawnAsync).default("powershell.exe", [
+                 "-c",
+                 `Get-Package -Name '${browserType}'`
+             ], {
+                 // @ts-expect-error: Missing NODE_ENV
+-                env,
+                 stdio: "ignore"
+             });
+             result = status === 0;
+-        } catch  {
++        } catch (e) {
++            console.error("DEBUG Failed supported browser check for type: ", browserType, "error:", e)
+             result = false;
+         }
+         return result;
+@@ -54,9 +55,23 @@ class LaunchBrowserImplWindows {
+     }
+     async launchAsync(browserType, args) {
+         const appId = this.MAP[browserType].appId;
+-        await openWithSystemRootEnvironment(appId, {
+-            arguments: args
+-        });
++        console.log("DEBUG got appId", appId, browserType, args);
++        // if (IS_WSL) {
++        //     let cmd = `start '${appId}' -ArgumentList ` + args.map(a => `'${a}'`).join(",");
++        //     console.log(`final cmd is ${cmd}`);
++        //     await (0, _spawnAsync).default("powershell.exe", [
++        //         "-c",
++        //         cmd,
++        //     ], {
++        //         // @ts-expect-error: Missing NODE_ENV
++        //         stdio: "ignore"
++        //     });
++        //     return this;
++        // } else {
++            await openWithSystemRootEnvironment(appId, {
++                arguments: args
++            });
++        // }
+         this._appId = appId;
+         return this;
+     }
+@@ -95,6 +110,7 @@ class LaunchBrowserImplWindows {
+         this._powershellEnv = {
+             PSModulePath
+         };
++        console.log("DEBUG got _powershellEnv", this._powershellEnv)
+         return this._powershellEnv;
+     }
+ }
+@@ -115,7 +131,8 @@ const IS_WSL = require("is-wsl") && !require("is-docker")();
+     try {
+         var _SYSTEMROOT;
+         process.env.SYSTEMROOT = (_SYSTEMROOT = process.env.SYSTEMROOT) != null ? _SYSTEMROOT : process.env.SystemRoot;
+-        return await _open.default.openApp(appId, options);
++        console.log("DEBUG openApp called with", appId, options)
++        return await _open.default.openApp(_open.default.apps.chrome, options);
+     } finally{
+         process.env.SYSTEMROOT = oldSystemRoot;
+     }
